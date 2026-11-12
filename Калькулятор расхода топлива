@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор расхода топлива</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --card:#1e293b;
+    --field:#0f1b2e;
+    --border:#334155;
+    --text:#e2e8f0;
+    --muted:#94a3b8;
+    --accent:#38bdf8;
+    --accent-dark:#0ea5e9;
+    --error:#f87171;
+    --radius:16px;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(circle at 20% 0%,#1e3a5f 0%,var(--bg) 55%);
+    color:var(--text);
+    padding:24px 16px;
+  }
+
+  header{
+    text-align:center;
+    margin-bottom:24px;
+  }
+
+  header h1{
+    font-size:clamp(1.3rem,4vw,1.8rem);
+    margin:0 0 6px;
+    font-weight:600;
+    letter-spacing:-.02em;
+  }
+
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:.9rem;
+  }
+
+  main{
+    flex:1;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
+  .card{
+    width:100%;
+    max-width:440px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:28px 24px;
+    box-shadow:0 20px 50px -20px rgba(0,0,0,.7);
+  }
+
+  .field{
+    margin-bottom:18px;
+  }
+
+  .field label{
+    display:block;
+    font-size:.85rem;
+    font-weight:500;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+
+  .field input{
+    width:100%;
+    padding:12px 14px;
+    font-size:1rem;
+    color:var(--text);
+    background:var(--field);
+    border:1px solid var(--border);
+    border-radius:10px;
+    outline:none;
+    transition:border-color .15s,box-shadow .15s;
+  }
+
+  .field input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(56,189,248,.18);
+  }
+
+  .field input::placeholder{
+    color:#475569;
+  }
+
+  .error{
+    display:none;
+    margin-top:6px;
+    font-size:.8rem;
+    color:var(--error);
+  }
+
+  .field.invalid input{
+    border-color:var(--error);
+  }
+
+  .field.invalid .error{
+    display:block;
+  }
+
+  button{
+    width:100%;
+    padding:13px 16px;
+    font-size:1rem;
+    font-weight:600;
+    color:#04202f;
+    background:linear-gradient(180deg,var(--accent),var(--accent-dark));
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    transition:transform .1s,filter .15s;
+    margin-top:4px;
+  }
+
+  button:hover{filter:brightness(1.07);}
+  button:active{transform:scale(.985);}
+
+  .result{
+    margin-top:22px;
+    padding:18px;
+    border-radius:12px;
+    background:var(--field);
+    border:1px solid var(--border);
+    display:none;
+  }
+
+  .result.show{display:block;}
+
+  .result-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    padding:7px 0;
+  }
+
+  .result-row + .result-row{
+    border-top:1px solid var(--border);
+  }
+
+  .result-row span:first-child{
+    font-size:.85rem;
+    color:var(--muted);
+  }
+
+  .result-row span:last-child{
+    font-size:1rem;
+    font-weight:600;
+    color:var(--accent);
+    white-space:nowrap;
+  }
+
+  .result-total span:last-child{
+    font-size:1.15rem;
+  }
+
+  footer{
+    text-align:center;
+    margin-top:28px;
+    font-size:.78rem;
+    color:#64748b;
+  }
+
+  @media (max-width:420px){
+    .card{padding:22px 18px;}
+    body{padding:16px 12px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Калькулятор расхода топлива</h1>
+  <p>Расход на 100 км и стоимость поездки — город и загород</p>
+</header>
+
+<main>
+  <form class="card" id="calcForm" novalidate>
+    <div class="field">
+      <label for="distance">Расстояние поездки, км</label>
+      <input type="number" id="distance" inputmode="decimal" step="any" min="0" placeholder="например, 350">
+      <div class="error" id="distanceError"></div>
+    </div>
+
+    <div class="field">
+      <label for="fuel">Израсходовано топлива, л</label>
+      <input type="number" id="fuel" inputmode="decimal" step="any" min="0" placeholder="например, 24.5">
+      <div class="error" id="fuelError"></div>
+    </div>
+
+    <div class="field">
+      <label for="price">Цена топлива, ₽/л</label>
+      <input type="number" id="price" inputmode="decimal" step="any" min="0" placeholder="например, 62.50">
+      <div class="error" id="priceError"></div>
+    </div>
+
+    <button type="submit">Рассчитать</button>
+
+    <div class="result" id="result">
+      <div class="result-row result-total">
+        <span>Расход на 100 км</span>
+        <span id="outConsumption">—</span>
+      </div>
+      <div class="result-row">
+        <span>Стоимость поездки</span>
+        <span id="outCost">—</span>
+      </div>
+      <div class="result-row">
+        <span>Стоимость 100 км</span>
+        <span id="outCost100">—</span>
+      </div>
+    </div>
+  </form>
+</main>
+
+<footer>Работает офлайн · без внешних библиотек</footer>
+
+<script>
+(function () {
+  const form = document.getElementById('calcForm');
+  const distance = document.getElementById('distance');
+  const fuel = document.getElementById('fuel');
+  const price = document.getElementById('price');
+  const result = document.getElementById('result');
+
+  const outConsumption = document.getElementById('outConsumption');
+  const outCost = document.getElementById('outCost');
+  const outCost100 = document.getElementById('outCost100');
+
+  const fields = [
+    { input: distance, error: document.getElementById('distanceError'), label: 'Расстояние' },
+    { input: fuel,     error: document.getElementById('fuelError'),     label: 'Количество топлива' },
+    { input: price,    error: document.getElementById('priceError'),    label: 'Цена топлива' }
+  ];
+
+  function setError(field, message) {
+    const wrapper = field.input.closest('.field');
+    if (message) {
+      wrapper.classList.add('invalid');
+      field.error.textContent = message;
+    } else {
+      wrapper.classList.remove('invalid');
+      field.error.textContent = '';
+    }
+  }
+
+  function parseValue(input) {
+    const raw = input.value.trim().replace(',', '.');
+    if (raw === '') return { ok: false, message: 'Поле не может быть пустым' };
+    const num = Number(raw);
+    if (!Number.isFinite(num)) return { ok: false, message: 'Введите корректное число' };
+    if (num < 0) return { ok: false, message: 'Значение не может быть отрицательным' };
+    if (num === 0) return { ok: false, message: 'Значение должно быть больше нуля' };
+    return { ok: true, value: num };
+  }
+
+  function formatRub(num) {
+    return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₽';
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    let valid = true;
+    const values = {};
+
+    fields.forEach(function (field) {
+      const res = parseValue(field.input);
+      if (!res.ok) {
+        setError(field, res.message);
+        valid = false;
+      } else {
+        setError(field, null);
+        values[field.input.id] = res.value;
+      }
+    });
+
+    if (!valid) {
+      result.classList.remove('show');
+      return;
+    }
+
+    const consumption = (values.fuel / values.distance) * 100;
+    const totalCost = values.fuel * values.price;
+    const cost100 = consumption * values.price;
+
+    outConsumption.textContent = consumption.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' л';
+    outCost.textContent = formatRub(totalCost);
+    outCost100.textContent = formatRub(cost100);
+
+    result.classList.add('show');
+  });
+
+  // Снимаем ошибку при вводе
+  fields.forEach(function (field) {
+    field.input.addEventListener('input', function () {
+      if (field.input.closest('.field').classList.contains('invalid')) {
+        setError(field, null);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
